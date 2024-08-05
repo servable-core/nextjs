@@ -1,5 +1,7 @@
 import axios from "axios"
 import getHeaders from "./lib/headers.js"
+import getConfig from 'next/config'
+const { publicRuntimeConfig: { processEnv } } = getConfig()
 
 export default async ({
   path,
@@ -7,7 +9,7 @@ export default async ({
   headers = {},
   context,
   version = 'v1',
-  serverUrl = process.env.NEXT_PUBLIC_SERVABLE_BACKEND_URL
+  serverUrl = processEnv.NEXT_PUBLIC_SERVABLE_BACKEND_URL
 }) => {
   try {
     const _headers = await getHeaders({ context })
