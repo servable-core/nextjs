@@ -1,0 +1,32 @@
+{
+  // Use IntelliSense to learn about possible Node.js debug attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.anak.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest Test",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+      "args": [
+        "--runInBand",
+        "--config=${workspaceFolder}/jest.config.js"
+      ],
+      "runtimeArgs": [
+        "--experimental-vm-modules",
+        // // "--trace-warnings",
+        // "--require=dotenv/config",
+        // "--nolazy",
+        // "--expose-gc",
+        // "--inspect-brk",
+        // "--experimental-modules",
+        // "--es-module-specifier-resolution=node",
+        // "--experimental-specifier-resolution=node"
+        // //"--unhandled-rejections=strict"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+  ]
+}
