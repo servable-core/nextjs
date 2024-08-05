@@ -1,19 +1,19 @@
 import axios from "axios"
 import getHeaders from "./lib/headers.js"
-import url from './lib/url.js'
 
 export default async ({
   path,
   params = {},
   headers = {},
   context,
-  version = 'v1'
+  version = 'v1',
+  serverUrl
 }) => {
   try {
     const _headers = await getHeaders({ context })
     const result = await axios({
       method: 'GET',
-      url: `${url}/${version}/${path}`,
+      url: `${serverUrl}/${version}/${path}`,
       headers: {
         ..._headers,
         ...headers

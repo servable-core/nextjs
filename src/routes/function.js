@@ -1,6 +1,5 @@
 import axios from "axios"
 import getHeaders from "./lib/headers.js"
-import url from './lib/url.js'
 import DataURIToBlob from "./lib/dataURIToBlob.js"
 
 export default async ({
@@ -10,11 +9,12 @@ export default async ({
   headers = {},
   files,
   context,
-  version = 'v1'
+  version = 'v1',
+  serverUrl
 }) => {
   let _url = name ? name : path
   _url = _url.toLowerCase()
-  _url = `${url}/${version}/function/${_url}`
+  _url = `${serverUrl}/${version}/function/${_url}`
   try {
     const _headers = await getHeaders({ context })
 
