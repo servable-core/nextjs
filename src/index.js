@@ -1,5 +1,5 @@
-import * as Routes from './routes'
-import * as User from './user'
+import * as Routes from './routes/index.js'
+import * as User from './user/index.js'
 // import * as Hooks from './hooks'
 
 export default {
