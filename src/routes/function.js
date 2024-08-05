@@ -1,9 +1,6 @@
 import axios from "axios"
 import getHeaders from "./lib/headers.js"
 import DataURIToBlob from "./lib/dataURIToBlob.js"
-import getConfig from 'next/config'
-const { publicRuntimeConfig: { processEnv } } = getConfig()
-
 
 export default async ({
   name,
@@ -13,7 +10,7 @@ export default async ({
   files,
   context,
   version = 'v1',
-  serverUrl = processEnv.NEXT_PUBLIC_SERVABLE_BACKEND_URL
+  serverUrl = Servable.serverUrl
 }) => {
   let _url = name ? name : path
   _url = _url.toLowerCase()
