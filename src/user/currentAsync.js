@@ -26,7 +26,6 @@ export default async ({ context, useRemoteIfNecessary = false } = {}) => {
     }
   })
 
-
   setCookie('currentuser',
     (result && !userIsRequiredButIsMissing)
       ? JSON.stringify(result)
