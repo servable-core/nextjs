@@ -1,1 +1,1 @@
-export { default as useServableFunction } from './useServableFunction'
+export { default as useServableFunction } from './useServableFunction.js'
