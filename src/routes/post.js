@@ -7,7 +7,7 @@ export default async ({
   headers = {},
   context,
   version = 'v1',
-  serverUrl
+  serverUrl = process.env.NEXT_PUBLIC_SERVABLE_BACKEND_URL
 }) => {
   try {
     const _headers = await getHeaders({ context })

@@ -10,7 +10,7 @@ export default async ({
   files,
   context,
   version = 'v1',
-  serverUrl
+  serverUrl = process.env.NEXT_PUBLIC_SERVABLE_BACKEND_URL
 }) => {
   let _url = name ? name : path
   _url = _url.toLowerCase()
