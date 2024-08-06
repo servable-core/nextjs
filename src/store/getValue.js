@@ -27,7 +27,7 @@ export default ({ context, id } = {}) => {
 
     if (isServerSide) {
       // console.log('____getStoreValue', 'isServerSide',
-      isServerSide, id, value, context, cookies)
+      // isServerSide, id, value, context, cookies)
     }
   } catch (e) {
     console.error('____getStoreValue:error', e, 'isServerSide',
