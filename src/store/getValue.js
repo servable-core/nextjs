@@ -8,29 +8,28 @@ export default ({ context, id } = {}) => {
     if (context) {
       const { req, res } = context
       value = getCookie(id, { req, res })
-      console.log('____getStoreValue:context')
+      // console.log('____getStoreValue:context')
     } else if (cookies && cookies.get) {
       const a = cookies().get(id)
       value = getCookie(id, { cookies })
-      console.log('____getStoreValue:withcookies',
-        'value: ',
-        value,
-        'cookies: ',
-        a
-        // JSON.stringify(cookies),
-      )
+      // console.log('____getStoreValue:withcookies',
+      //   'value: ',
+      //   value,
+      //   'cookies: ',
+      //   a
+      //   // JSON.stringify(cookies),
+      // )
     } else {
       value = getCookie(id)
-      console.log('____getStoreValue:nocontextnocookies')
+      // console.log('____getStoreValue:nocontextnocookies')
     }
 
 
     if (isServerSide) {
-      console.log('____getStoreValue', 'isServerSide',
-        isServerSide, id, value, context, cookies)
+      // console.log('____getStoreValue', 'isServerSide',
+      isServerSide, id, value, context, cookies)
     }
   } catch (e) {
-
     console.error('____getStoreValue:error', e, 'isServerSide',
       isServerSide, id, value, context, cookies)
 
