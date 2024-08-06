@@ -1,5 +1,9 @@
-import { setCookie } from 'cookies-next'
+import { setStoreValue } from '../store/index.js'
 
 export default ({ context, payload } = {}) => {
-    setCookie('currentuser', payload, context)
+    setStoreValue({
+        id: 'currentuser',
+        value: payload,
+        context
+    })
 }

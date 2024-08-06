@@ -1,17 +1,22 @@
-import * as Routes from '../routes/index.js'
-
-import { getCookie, setCookie } from 'cookies-next'
+import * as Routes from '../routes/index.js';
+import { getStoreValue, setStoreValue } from '../store/index.js';
 
 export default async ({ context, useRemoteIfNecessary = false } = {}) => {
-  const { req } = context
-  const { cookies: { sessiontoken } } = req
+  const sessiontoken = getStoreValue({
+    id: 'sessiontoken',
+    context,
+  })
 
   if (!sessiontoken) {
     return null
   }
 
   if (sessiontoken && !useRemoteIfNecessary) {
-    let data = getCookie('currentuser')
+    let data = getStoreValue({
+      id: 'currentuser',
+      context,
+    })
+
     if (data) {
       data = JSON.parse(data)
       return data
@@ -26,11 +31,13 @@ export default async ({ context, useRemoteIfNecessary = false } = {}) => {
     }
   })
 
-  setCookie('currentuser',
-    (result && !userIsRequiredButIsMissing)
+  setStoreValue({
+    id: 'currentuser',
+    value: (result && !userIsRequiredButIsMissing)
       ? JSON.stringify(result)
       : null,
-    { context })
+    context
+  })
 
   return result
 }

@@ -1,13 +1,11 @@
-import { getCookie } from 'cookies-next'
+import { getStoreValue } from '../store/index.js'
 
-export default ({ context = Servable.context } = {}) => {
-  let currentUser
-  if (context) {
-    const { req, res } = context
-    currentUser = getCookie('currentuser', { req, res })
-  } else {
-    currentUser = getCookie('currentuser')
-  }
+export default ({ context } = {}) => {
+  const isServerSide = typeof window === 'undefined'
+  let currentUser = getStoreValue({
+    id: 'currentuser',
+    context,
+  })
 
   if (!currentUser) {
     return null
