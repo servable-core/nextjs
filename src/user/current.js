@@ -1,6 +1,6 @@
 import { getCookie } from 'cookies-next'
 
-export default ({ context } = {}) => {
+export default ({ context = Servable.context } = {}) => {
   let currentUser
   if (context) {
     const { req, res } = context
