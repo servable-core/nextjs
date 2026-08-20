@@ -1,93 +1,87 @@
-import axios from "axios"
-import getHeaders from "./lib/headers.js"
-import DataURIToBlob from "./lib/dataURIToBlob.js"
+import DataURIToBlob from "./lib/dataURIToBlob.js";
+import requestRoute from "./lib/requestRoute.js";
 
-export default async ({
-  name,
-  path,
-  params = {},
-  headers = {},
-  files,
-  context,
-  version = 'v1',
-  serverUrl = Servable.serverUrl
-}) => {
-  let _url = name ? name : path
-  _url = _url.toLowerCase()
-  _url = `${serverUrl}/${version}/function/${_url}`
-  try {
-    const _headers = await getHeaders({ context })
+const SERVABLE_BACKEND_VERSION =
+  process.env.NEXT_PUBLIC_SERVABLE_BACKEND_VERSION || "v1";
+const SERVABLE_TIMEOUT = Number(
+  process.env.NEXT_PUBLIC_SERVABLE_TIMEOUT ||
+    process.env.NEXT_PUBLIC_SERVABLE_TIMEOUT_MS ||
+    15000,
+);
 
-    let result
-    if (files && files.length) {
-      const form = new FormData()
+const ServableFunction = async (props) => {
+  const {
+    name,
+    path,
+    params = {},
+    headers = {},
+    traceparent,
+    baggage,
+    redirectIfUserRequired = false,
+    files = [],
+    context,
+    version = SERVABLE_BACKEND_VERSION,
+    serverUrl = process.env.NEXT_PUBLIC_SERVABLE_BACKEND_URL,
+    timeout = SERVABLE_TIMEOUT,
+    signal,
+    // retry options
+    retryCount,
+    retryInitialDelayMs,
+    retryBackoffFactor,
+    retryMaxDelayMs,
+    retryOnStatuses,
+    retryOnNetworkError,
+  } = props;
 
-      for (const file of files) {
-        if (file.base64) {
-          const _file = DataURIToBlob(file.base64)
-          form.append("files", _file, file.fileName)
-        }
-        else if (file.json) {
-          const str = JSON.stringify(file.json)
-          const bytes = new TextEncoder().encode(str)
-          const _file = new Blob([bytes], {
-            type: "application/json;charset=utf-8"
-          });
+  let functionPath = name ? name : path;
+  functionPath = functionPath.toLowerCase();
 
-          form.append("files", _file, file.fileName)
-          // form.append("files", _file)
-        }
-        else {
-          form.append("files", file)
-        }
+  let data;
+  if (files && files.length) {
+    const form = new FormData();
+    for (const file of files) {
+      if (file.base64) {
+        const serializedFile = DataURIToBlob(file.base64);
+        form.append("files", serializedFile, file.fileName);
+      } else if (file.json) {
+        const serializedJson = JSON.stringify(file.json);
+        const jsonBytes = new TextEncoder().encode(serializedJson);
+        const serializedFile = new Blob([jsonBytes], {
+          type: "application/json;charset=utf-8",
+        });
+
+        form.append("files", serializedFile, file.fileName);
+      } else {
+        form.append("files", file, file.fieldName ? file.fieldName : null);
       }
-
-      result = await axios.post(_url,
-        form,
-        {
-          headers: {
-            ..._headers,
-            ...headers,
-            "Content-Type": "multipart/form-data"
-          },
-          params,
-        })
-    }
-    else {
-      result = await axios({
-        method: 'POST',
-        url: _url,
-        headers: {
-          ..._headers,
-          ...headers
-        },
-        params,
-      })
     }
 
-    return { result: result.data }
+    data = form;
   }
-  catch (e) {
-    console.error(e)
-    const { code } = e
-    let userIsRequiredButIsMissing = false
-    let hasTechnicalError = true
-    let error = {
-      code: e.code,
-      // title: e.response,
-    }
 
-    switch (code) {
-      case 209: {
-        userIsRequiredButIsMissing = true
-      } break
-      default: break
-    }
-    return {
-      userIsRequiredButIsMissing,
-      hasTechnicalError,
-      error
-    }
-  }
-}
+  return requestRoute({
+    method: "FUNCTION",
+    transportMethod: "POST",
+    retryMethod: "FUNCTION",
+    path: `function/${functionPath}`,
+    params,
+    headers,
+    traceparent,
+    baggage,
+    context,
+    version,
+    serverUrl,
+    timeout,
+    redirectIfUserRequired,
+    signal,
+    data,
+    retryCount,
+    retryInitialDelayMs,
+    retryBackoffFactor,
+    retryMaxDelayMs,
+    retryOnStatuses,
+    retryOnNetworkError,
+  });
+};
 
+export default ServableFunction;

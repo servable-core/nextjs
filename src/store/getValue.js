@@ -1,39 +1,44 @@
 import { getCookie } from 'cookies-next'
-import { cookies } from 'next/headers'
 
 export default ({ context, id } = {}) => {
-  let value
-  const isServerSide = typeof window === 'undefined'
-  try {
-    if (context) {
-      const { req, res } = context
-      value = getCookie(id, { req, res })
-      // console.log('____getStoreValue:context')
-    } else if (cookies && cookies.get) {
-      const a = cookies().get(id)
-      value = getCookie(id, { cookies })
-      // console.log('____getStoreValue:withcookies',
-      //   'value: ',
-      //   value,
-      //   'cookies: ',
-      //   a
-      //   // JSON.stringify(cookies),
-      // )
-    } else {
-      value = getCookie(id)
-      // console.log('____getStoreValue:nocontextnocookies')
+    let value
+    const isServerSide = typeof window === 'undefined'
+    //console.log('LOGNAK', '____getStoreValue: enter', id)
+    try {
+        if (context) {
+            //console.log('LOGNAK', '____getStoreValue: context')
+            const { req, res } = context
+            value = getCookie(id, { req, res })
+            // //console.log('LOGNAK', '____getStoreValue:context')
+        } else if (isServerSide) {
+            const cookies = (require('next/headers')).cookies
+            //console.log('LOGNAK', '____getStoreValue: no context, cookies', cookies, 'cookies.get', Object.keys(cookies))
+            if (cookies) {
+                // const a = cookies().get(id)
+                value = getCookie(id, { cookies })
+                //console.log('LOGNAK', '____getStoreValue:withcookies id',
+                // id,
+                // 'value: ',
+                // value,
+                // 'cookies: ',
+                // // a
+                // // JSON.stringify(cookies),
+                // )
+            }
+        } else {
+            value = getCookie(id)
+            //console.log('LOGNAK', '____getStoreValue:nocontextnocookies')
+        }
+
+
+        if (isServerSide) {
+            // //console.log('LOGNAK', '____getStoreValue', 'isServerSide',
+            // isServerSide, id, value, context, cookies)
+        }
+    } catch (e) {
+        console.error('LOGNAK', '____getStoreValue:error', e, 'isServerSide',
+            isServerSide, id, value, context)
     }
 
-
-    if (isServerSide) {
-      // console.log('____getStoreValue', 'isServerSide',
-      // isServerSide, id, value, context, cookies)
-    }
-  } catch (e) {
-    console.error('____getStoreValue:error', e, 'isServerSide',
-      isServerSide, id, value, context, cookies)
-
-  }
-
-  return value
+    return value
 }

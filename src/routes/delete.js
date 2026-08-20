@@ -29,7 +29,7 @@ export default async ({
   retryOnNetworkError,
 }) => {
   return requestRoute({
-    method: "POST",
+    method: "DELETE",
     path,
     params,
     headers,
