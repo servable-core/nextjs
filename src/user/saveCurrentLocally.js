@@ -1,5 +1,6 @@
 import { setStoreValue } from "../store/index.js";
 import { setCurrentUser } from "lib/contexts/currentUserContext";
+import { setAccessToken } from "./accessTokenStore.js";
 
 export default ({
   context,
@@ -12,35 +13,25 @@ export default ({
     secure: process.env.NODE_ENV !== "development",
   };
 
-  // setStoreValue({
-  //     id: 'X-Servable-Session-Token-C',
-  //     value: 'DEDENozknoze',
-  //     context,
-  //     options: {
-  //         ...options,
-  //         httpOnly: true
-  //     }
-  // })
-  // setStoreValue({
-  //     id: 'X-Servable-Session-Token-Biz',
-  //     value: 'dedezdoezdnozidnzoidnezo',
-  //     context,
-  //     options: {
-  //         ...options,
-  //         httpOnly: true
-  //     }
-  // })
-
   setStoreValue({
-    id: "_gis_parE",
+    id: "_platform_cached_user",
     value: JSON.stringify(currentuser),
     context,
     options,
   });
 
+  // Every login route's response now merges in { accessToken, expiresIn, ... } alongside the
+  // usual user fields (see backend/main's mint.js / Servable.App.User.mintSessionTokens) - this
+  // is the one funnel every sign-in/sign-up/OAuth/magic-link call site already routes through,
+  // so capturing it here covers all of them without touching each call site individually.
+  // Server-side calls (context present) have no in-memory browser store to write to.
+  if (!context && currentuser?.accessToken) {
+    setAccessToken(currentuser.accessToken);
+  }
+
   if (sessiontoken) {
     setStoreValue({
-      id: "_b_par3",
+      id: "_platform_device_id",
       value: installationid,
       context,
       options,
