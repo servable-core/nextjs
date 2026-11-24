@@ -2,10 +2,8 @@ import * as Sentry from "@sentry/nextjs";
 
 const TRACEPARENT_HEADER = "traceparent";
 const BAGGAGE_HEADER = "baggage";
-const SENTRY_TRACE_HEADER = "sentry-trace";
 
 const TRACEPARENT_RE = /^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/i;
-const SENTRY_TRACE_RE = /^([0-9a-f]{32})-([0-9a-f]{16})(?:-([01]))?$/i;
 
 const getHeaderValue = (headers = {}, headerName = "") => {
   const wanted = headerName.toLowerCase();
@@ -52,23 +50,6 @@ const parseTraceparent = (traceparent) => {
   };
 };
 
-const parseSentryTrace = (sentryTrace) => {
-  if (typeof sentryTrace !== "string") {
-    return {};
-  }
-
-  const match = sentryTrace.trim().match(SENTRY_TRACE_RE);
-  if (!match) {
-    return {};
-  }
-
-  return {
-    trace_id: match[1].toLowerCase(),
-    span_id: match[2].toLowerCase(),
-    sampled: match[3] === "1" ? true : match[3] === "0" ? false : undefined,
-  };
-};
-
 const parseBaggage = (baggage) => {
   if (typeof baggage !== "string" || !baggage.trim()) {
     return {};
@@ -106,42 +87,45 @@ const buildBaggage = ({ currentBaggage = "", trace_id, span_id }) => {
 const buildTraceparent = ({ trace_id, span_id, sampled = true }) =>
   `00-${trace_id}-${span_id}-${sampled ? "01" : "00"}`;
 
-const getSentryTraceContext = () => {
+const TRACE_ID_RE = /^[0-9a-f]{32}$/i;
+const SPAN_ID_RE = /^[0-9a-f]{16}$/i;
+const isValidId = (value, pattern) =>
+  typeof value === "string" && pattern.test(value) && !/^0+$/.test(value);
+
+// The trace of the work running now: the active span's (on the server, the span Sentry or Next.js
+// opened for this request; in the browser, the page load or navigation), so every call a request
+// makes shares the request's trace and no other request's.
+//
+// Never the scope's propagation context (owner's Q1690 a, 2026-11-24): Sentry makes one when it
+// starts and every scope forked for a request copies it, so on the server it is the same trace id
+// for the life of the process. Read from there, every server-side call of a web/main pod carried
+// one trace id: in Tempo, trace f818b0eb8f674238877776c263be1efb held 201 unrelated backend/main
+// requests from the pod's start (2026-11-20 12:00) to 11-24.
+const getActiveSpanTraceContext = () => {
   try {
-    const scope = Sentry.getCurrentScope?.();
-    const propagationContext = scope?.getPropagationContext?.() || {};
-    const parsedSentryTrace = parseSentryTrace(
-      typeof propagationContext.traceparent === "string"
-        ? propagationContext.traceparent
-        : undefined,
-    );
+    const spanContext = Sentry.getActiveSpan?.()?.spanContext?.();
+    if (
+      !isValidId(spanContext?.traceId, TRACE_ID_RE) ||
+      !isValidId(spanContext?.spanId, SPAN_ID_RE)
+    ) {
+      return {};
+    }
 
     return {
-      trace_id:
-        parsedSentryTrace.trace_id ||
-        (typeof propagationContext.traceId === "string"
-          ? propagationContext.traceId
-          : undefined),
-      span_id:
-        parsedSentryTrace.span_id ||
-        (typeof propagationContext.spanId === "string"
-          ? propagationContext.spanId
-          : undefined),
-      sampled:
-        parsedSentryTrace.sampled ??
-        (typeof propagationContext.sampled === "boolean"
-          ? propagationContext.sampled
-          : undefined),
-      baggage:
-        typeof propagationContext.baggage === "string"
-          ? propagationContext.baggage
-          : undefined,
+      trace_id: spanContext.traceId.toLowerCase(),
+      span_id: spanContext.spanId.toLowerCase(),
     };
   } catch (_err) {
     return {};
   }
 };
 
+// Where the trace of a call comes from, first found wins: a traceparent the caller passed, a trace
+// the caller's baggage names, the active span; otherwise a new trace of its own, per call. The ids
+// come from one source, never a trace id from one and a parent span id from another.
+//
+// The call is always marked recorded (flag 01): web/main's spans go to Sentry, sampled there, and
+// never to Tempo, so Sentry's sampling must not decide which backend requests backend/main records.
 export const resolveTraceContext = ({
   traceparent,
   baggage,
@@ -150,22 +134,26 @@ export const resolveTraceContext = ({
   const traceparentHeader =
     traceparent || getHeaderValue(headers, TRACEPARENT_HEADER);
   const baggageHeader = baggage || getHeaderValue(headers, BAGGAGE_HEADER);
-  const sentryTraceContext = getSentryTraceContext();
 
   const parsedTraceparent = parseTraceparent(traceparentHeader);
   const parsedBaggage = parseBaggage(baggageHeader);
+  const baggageTraceContext = isValidId(parsedBaggage.trace_id, TRACE_ID_RE)
+    ? {
+        trace_id: parsedBaggage.trace_id.toLowerCase(),
+        span_id: isValidId(parsedBaggage.span_id, SPAN_ID_RE)
+          ? parsedBaggage.span_id.toLowerCase()
+          : undefined,
+      }
+    : {};
 
-  const resolvedTraceId =
-    parsedTraceparent.trace_id ||
-    parsedBaggage.trace_id ||
-    sentryTraceContext.trace_id ||
-    getRandomHex(32);
+  const chosenTraceContext = [
+    parsedTraceparent,
+    baggageTraceContext,
+    getActiveSpanTraceContext(),
+  ].find((candidate) => candidate.trace_id) || {};
 
-  const resolvedSpanId =
-    parsedTraceparent.span_id ||
-    parsedBaggage.span_id ||
-    sentryTraceContext.span_id ||
-    getRandomHex(16);
+  const resolvedTraceId = chosenTraceContext.trace_id || getRandomHex(32);
+  const resolvedSpanId = chosenTraceContext.span_id || getRandomHex(16);
 
   const resolvedTraceparent =
     traceparentHeader && parsedTraceparent.trace_id && parsedTraceparent.span_id
@@ -173,11 +161,11 @@ export const resolveTraceContext = ({
       : buildTraceparent({
           trace_id: resolvedTraceId,
           span_id: resolvedSpanId,
-          sampled: sentryTraceContext.sampled,
+          sampled: true,
         });
 
   const resolvedBaggage = buildBaggage({
-    currentBaggage: baggageHeader || sentryTraceContext.baggage,
+    currentBaggage: baggageHeader,
     trace_id: resolvedTraceId,
     span_id: resolvedSpanId,
   });

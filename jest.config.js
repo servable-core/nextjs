@@ -10,5 +10,9 @@ export default ({
   // "lib/account/lib/openaccountredirect") via their own baseUrl-relative
   // path config. modulePaths mirrors that for this package's own tests so
   // the stub under ./lib stands in for the consumer-provided module.
-  "modulePaths": ["<rootDir>"]
+  "modulePaths": ["<rootDir>"],
+  // @sentry/nextjs is a peer dependency the consuming app provides, not installed here (src/routes/lib/trace.js).
+  "moduleNameMapper": {
+    "^@sentry/nextjs$": "<rootDir>/lib/sentry/nextjs.js"
+  }
 })
